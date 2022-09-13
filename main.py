@@ -1,57 +1,41 @@
-import random 
-first_primes_list = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 
-                     31, 37, 41, 43, 47, 53, 59, 61, 67,  
-                     71, 73, 79, 83, 89, 97, 101, 103,  
-                     107, 109, 113, 127, 131, 137, 139,  
-                     149, 151, 157, 163, 167, 173, 179,  
-                     181, 191, 193, 197, 199, 211, 223, 
-                     227, 229, 233, 239, 241, 251, 257, 
-                     263, 269, 271, 277, 281, 283, 293, 
-                     307, 311, 313, 317, 331, 337, 347, 349] 
-  
-def nBitRandom(n): 
-    return random.randrange(2**(n-1)+1, 2**n - 1) 
-  
-def getLowLevelPrime(n): 
-		while True: 
-				pc = nBitRandom(n)  
-				
-				for divisor in first_primes_list: 
-						if pc % divisor == 0 and divisor**2 <= pc: 
-								break
-				else: return pc 
+import hashlib
 
-def isMillerRabinPassed(mrc): 
-    
-    maxDivisionsByTwo = 0
-    ec = mrc-1
-    while ec % 2 == 0: 
-        ec >>= 1
-        maxDivisionsByTwo += 1
-    assert(2**maxDivisionsByTwo * ec == mrc-1) 
-  
-    def trialComposite(round_tester): 
-        if pow(round_tester, ec, mrc) == 1: 
-            return False
-        for i in range(maxDivisionsByTwo): 
-            if pow(round_tester, 2**i * ec, mrc) == mrc-1: 
-                return False
-        return True
-  
-    
-    numberOfRabinTrials = 20 
-    for i in range(numberOfRabinTrials): 
-        round_tester = random.randrange(2, mrc) 
-        if trialComposite(round_tester): 
-            return False
-    return True
-  
+from miller_rabin import get_prime_128_bits, random_n_bits_number
+from aes import AES
+
+def hash_128_bits(key):
+	return int(hashlib.sha3_256(str(key).encode()).hexdigest(), base=16)
+
+def sha3(filename):
+        hash_sha3 = hashlib.sha3_256()
+        with open(filename, "rb") as f:
+            for block in iter(lambda: f.read(4096), b""):
+                hash_sha3.update(block)
+        return int(hash_sha3.hexdigest(), base=16)
+
+def split_bits(value, n):
+    mask = (1 << n) - 1
+    blocks = []
+    while value:
+        blocks.append(value & mask)
+        value >>= n
+    blocks.reverse()
+    return blocks
+
 if __name__ == '__main__': 
-    while True: 
-        n = 1024
-        prime_candidate = getLowLevelPrime(n) 
-        if not isMillerRabinPassed(prime_candidate): 
-            continue
-        else: 
-            print(n, "bit prime is: \n", prime_candidate) 
-            break
+    counter = random_n_bits_number(128)
+
+    key = get_prime_128_bits()
+    key = hash_128_bits(key)
+    aes = AES(key)
+
+    plaintext = sha3("aes.py")
+    plaintext_blocks = split_bits(plaintext, 128)
+
+    result = ""
+    for block in plaintext_blocks: 
+      encrypted_counter = aes.encrypt(counter)
+      result += str(encrypted_counter ^ block)
+      counter += 1
+
+    print(result)
