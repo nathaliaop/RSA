@@ -47,10 +47,9 @@ def miller_rabin(prime_candidate):
             return False
     return True
 
-def get_prime_128_bits():
+def get_prime_n_bits(n):
 		prime = 0
 		while True: 
-				n = 1024
 				prime_candidate = low_level_prime(n) 
 				if not miller_rabin(prime_candidate): 
 						continue
