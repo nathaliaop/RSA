@@ -3,7 +3,7 @@ import hashlib
 from rsa import gen_keys, rsa, verify_signature
 from miller_rabin import get_prime_n_bits, random_n_bits_number
 from aes import AES
-from utils import split_128bits, padding, encode_to_base64, decode_from_base64, read_key_from_file, write_key_on_file, read_from_file, write_on_file, hash_128_bits, split_bits, sha3
+from utils import split_128bits, padding, remove_padding, encode_to_base64, decode_from_base64, read_key_from_file, write_key_on_file, read_from_file, write_on_file, hash_128_bits, split_bits, sha3
 
 import argparse
 
@@ -49,44 +49,77 @@ def main():
         else:
             print('Assinatura inválida')
     elif args.action == 'crypt':
-        pass
-    elif args.action == 'decrypt':
-        pass
+        counter = random_n_bits_number(128)
 
+        key = get_prime_n_bits(1024)
+        key = hash_128_bits(key)
+
+        # salva o counter e a key em um arquivo
+        write_on_file('counter.key', f'{counter}\n{key}\n')
+
+        aes = AES(key)
+
+        plaintext = padding(read_from_file(args.file, 'rb'))
+        plaintext_splitted = split_128bits(plaintext)
+
+        result = bytes()
+        for block in plaintext_splitted:
+            counter_encrypted = aes.encrypt(counter)
+            
+            block_integer = int.from_bytes(block, 'big')
+
+            result += (block_integer ^ counter_encrypted).to_bytes(128 // 8, 'big')
+
+            counter += 1
+
+        write_on_file('counter_encrypted.txt', encode_to_base64(result))
+
+    elif args.action == 'decrypt':
+        with open('counter.key', 'r') as file:
+            counter = int(file.readline())
+            key = int(file.readline())
+
+        aes = AES(key)
+
+        blocks = split_128bits(decode_from_base64(read_from_file('counter_encrypted.txt')))
+
+        plaintext_decrypted = bytes()
+
+        for block in blocks:
+            counter_encrypted = aes.encrypt(counter)
+
+            answer_result = counter_encrypted ^ int.from_bytes(block, 'big')
+
+            plaintext_decrypted += answer_result.to_bytes(128//8, 'big')
+
+            counter += 1
+
+        plaintext_decrypted = remove_padding(plaintext_decrypted)
+
+        with open('output.txt', 'wb') as file:
+            file.write(plaintext_decrypted)
 
 if __name__ == '__main__': 
     main()
+    # apagar coisas de decrypt no aes
+    # usar oaep ao assinar
 
-    counter = random_n_bits_number(128)
-    ini_counter = counter
+    
+    # aes = AES(key)
 
-    key = get_prime_n_bits(1024)
-    key = hash_128_bits(key)
-    aes = AES(key)
-
-    plaintext = padding(read_from_file('example.txt', 'rb'))
     # plaintext = encode_to_base64(read_from_file('example.txt', 'rb'))
 
-    num_bytes = sys.getsizeof(plaintext)
 
-    plaintext_splitted = split_128bits(plaintext)
+    # plaintext_splitted = split_128bits(plaintext)
 
-    result = []
-    for block in plaintext_splitted:
-        counter_encrypted = aes.encrypt(counter)
-        
-        block_integer = int.from_bytes(block, 'big')
-
-        result += [block_integer ^ counter_encrypted]
-
-        counter += 1
+    
     
     # print(result)
 
     # plaintext = int.from_bytes(plaintext, 'big')
 
     # multiplo = num_bytes + (128 - num_bytes % 128)
-
+    ''''
     plaintext_decrypted = bytes()
 
     counter = ini_counter
@@ -102,9 +135,9 @@ if __name__ == '__main__':
     print(plaintext_decrypted)
     print()
     print(plaintext)
-
     '''
-    apagar coisas de decrypt no aes
+    '''
+    
 
     dividir o plaintext em blocos de 128 bits
     pra cada bloco voce criptografa o counter (incremetado sempre) com aes
