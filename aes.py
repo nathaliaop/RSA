@@ -40,6 +40,7 @@ def matrix_to_text(matrix):
         for j in range(4):
             text |= (matrix[i][j] << (120 - 8 * (4 * i + j)))
     return text
+
 class AES:
     def __init__(self, key):
         self.round_keys = text_to_matrix(key)
@@ -61,46 +62,46 @@ class AES:
     def encrypt(self, plaintext):
         plaintext = text_to_matrix(plaintext)
 
-        self.__add_round_key(plaintext, self.round_keys[:4])
+        self.add_round_key(plaintext, self.round_keys[:4])
 
         for i in range(1, 10):
-            self.__round_encrypt(plaintext, self.round_keys[4 * i : 4 * (i + 1)])
+            self.round_encrypt(plaintext, self.round_keys[4 * i : 4 * (i + 1)])
 
-        self.__sub_bytes(plaintext)
-        self.__shift_rows(plaintext)
-        self.__add_round_key(plaintext, self.round_keys[40:])
+        self.sub_bytes(plaintext)
+        self.shift_rows(plaintext)
+        self.add_round_key(plaintext, self.round_keys[40:])
 
         return matrix_to_text(plaintext)
 
-    def __round_encrypt(self, matrix, key):
-        self.__sub_bytes(matrix)
-        self.__shift_rows(matrix)
-        self.__mix_columns(matrix)
-        self.__add_round_key(matrix, key)
+    def round_encrypt(self, matrix, key):
+        self.sub_bytes(matrix)
+        self.shift_rows(matrix)
+        self.mix_columns(matrix)
+        self.add_round_key(matrix, key)
 
-    def __add_round_key(self, matrix, key):
+    def add_round_key(self, matrix, key):
         for i in range(4):
             for j in range(4):
                 matrix[i][j] ^= key[i][j]
 
-    def __sub_bytes(self, matrix):
+    def sub_bytes(self, matrix):
         for i in range(4):
             for j in range(4):
                 matrix[i][j] = SUBSTITUTION_BOX[matrix[i][j]]
 
-    def __shift_rows(self, matrix):
+    def shift_rows(self, matrix):
         matrix[0][1], matrix[1][1], matrix[2][1], matrix[3][1] = matrix[1][1], matrix[2][1], matrix[3][1], matrix[0][1]
         matrix[0][2], matrix[1][2], matrix[2][2], matrix[3][2] = matrix[2][2], matrix[3][2], matrix[0][2], matrix[1][2]
         matrix[0][3], matrix[1][3], matrix[2][3], matrix[3][3] = matrix[3][3], matrix[0][3], matrix[1][3], matrix[2][3]
 
-    def __multiply(self, a):
-      return  (((a << 1) ^ 0x1B) & 0xFF) if (a & 0x80) else (a << 1)
+    def multiply(self, a):
+        return (((a << 1) ^ 0x1B) & 0xFF) if (a & 0x80) else (a << 1)
 
-    def __mix_columns(self, s):
+    def mix_columns(self, s):
         for i in range(4):
             t = s[i][0] ^ s[i][1] ^ s[i][2] ^ s[i][3]
             u = s[i][0]
-            s[i][0] ^= t ^ self.__multiply(s[i][0] ^ s[i][1])
-            s[i][1] ^= t ^ self.__multiply(s[i][1] ^ s[i][2])
-            s[i][2] ^= t ^ self.__multiply(s[i][2] ^ s[i][3])
-            s[i][3] ^= t ^ self.__multiply(s[i][3] ^ u)
+            s[i][0] ^= t ^ self.multiply(s[i][0] ^ s[i][1])
+            s[i][1] ^= t ^ self.multiply(s[i][1] ^ s[i][2])
+            s[i][2] ^= t ^ self.multiply(s[i][2] ^ s[i][3])
+            s[i][3] ^= t ^ self.multiply(s[i][3] ^ u)
