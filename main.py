@@ -1,6 +1,6 @@
 import hashlib
 
-from rsa import gen_keys, rsa, verify_signature
+from rsa import gen_keys, rsa, verify_signature, oaep_encode, oaep_decode
 from miller_rabin import get_prime_n_bits, random_n_bits_number
 from aes import AES
 from utils import split_128bits, padding, remove_padding, encode_to_base64, decode_from_base64, read_key_from_file, write_key_on_file, read_from_file, write_on_file, hash_128_bits, split_bits, sha3
@@ -36,7 +36,7 @@ def main():
         with open(args.file, 'rb') as file:
             content = file.read()
 
-        signature = rsa(private_key, hashlib.sha3_256(content).digest())
+        signature = rsa(private_key, oaep_encode(private_key[0], hashlib.sha3_256(content).digest()))
 
         write_on_file(args.signature, encode_to_base64(signature))
     elif args.action == 'verify':        

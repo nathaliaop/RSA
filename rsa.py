@@ -1,5 +1,7 @@
 import hashlib
 from os import urandom
+from math import ceil
+from operator import xor
 
 from miller_rabin import get_prime_n_bits
 
@@ -51,9 +53,12 @@ def rsa(key, message):
     return c.to_bytes(k, "big")
 
 def verify_signature(public_key, signature):
-    with open('example.txt', 'rb') as file:
-        newcontent = file.read()
+	with open('example.txt', 'rb') as file:
+		newcontent = file.read()
+		
+		try:
+			rsa_signature = oaep_decode(public_key[0], rsa(public_key, signature))
+		except:
+			return False
 
-        rsa_signature = rsa(public_key, signature)[-32:]
-        
-        return rsa_signature == hashlib.sha3_256(newcontent).digest()
+	return rsa_signature == public_key[0], hashlib.sha3_256(newcontent).digest()
